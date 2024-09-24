@@ -194,7 +194,7 @@
         
         // Function to fetch and display current and upcoming events via proxy
         async function getUpcomingEvent() {
-            const url = "https://www.ehfg.org/programme.json?year=2024"; // Your local server's proxy URL
+            const url = "https://cors-anywhere.herokuapp.com/https://www.ehfg.org/programme.json?year=2024"; // Your local server's proxy URL
             const loadingMessage = document.getElementById('loadingMessage');
             const currentEventsContainer = document.getElementById('currentEventsContainer');
             const upcomingEventsContainer = document.querySelector('.upcoming-events'); // Container for upcoming events
