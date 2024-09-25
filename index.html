@@ -193,100 +193,109 @@
         let stopFetching = false; // Flag to stop fetching events if there's no more space or events
         
         // Function to fetch and display current and upcoming events via proxy
-        async function getUpcomingEvent() {
-            const url = "https://cors-anywhere.herokuapp.com/https://www.ehfg.org/programme.json?year=2024"; // Your local server's proxy URL
-            const loadingMessage = document.getElementById('loadingMessage');
-            const currentEventsContainer = document.getElementById('currentEventsContainer');
-            const upcomingEventsContainer = document.querySelector('.upcoming-events'); // Container for upcoming events
-        
-            try {
-                // Show loading indicator
-                loadingMessage.innerText = "";
-        
-                // Fetch the event data from the proxy server
-                const response = await fetch(url);
-        
-                // Check if the response is OK
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-        
-                // Parse the JSON response
-                const data = await response.json();
-        
-                // Assuming the JSON structure has a list of events in an array
-                const events = data.events || data; // Adjust based on actual JSON structure
-        
-                // Clear any previous events if it's the first time loading
-                if (!nextEventCheckTime) {
-                    currentEventsContainer.innerHTML = '';
-                    upcomingEventsContainer.innerHTML = '';
-                }
-        
-                // Get the current date and time or the next event check time
-                const currentDate = nextEventCheckTime || new Date(); // Use nextEventCheckTime if set, otherwise use the current time
-        
-                // Detect Current Events: Check if any event is happening now
-                const currentEvents = events.filter(event => {
-                    const eventStartDate = combineDateTime(event.date, event.start);
-                    const eventEndDate = combineDateTime(event.date, event.end);
-                    return eventStartDate && eventEndDate && currentDate >= eventStartDate && currentDate <= eventEndDate;
-                });
-        
-                // Detect Upcoming Events: Check for upcoming events without a time limit
-                const upcomingEvents = events.filter(event => {
-                    const eventStartDate = combineDateTime(event.date, event.start);
-                    return eventStartDate > currentDate;
-                });
-        
-                // Combine both current and upcoming events
-                const allEvents = [...currentEvents, ...upcomingEvents];
-        
-                // Limit the total number of displayed events to 4
-                const displayedEvents = allEvents.slice(0, 3);
-        
-                // Display current and upcoming events, up to 4 total
-                displayedEvents.forEach((event, index) => {
-                    const eventContainer = document.createElement('div');
-                    eventContainer.classList.add('event-container');
-                    const eventType = index < currentEvents.length ? 'Current Event' : 'Upcoming Event'; // Determine if it's current or upcoming
-                    eventContainer.innerHTML = `
-                        <h2>${eventType}</h2>
-                        <div class="event-details">
-                            <p><strong>Title:</strong> ${event.eventname || "Untitled Event"}</p>
-                            <p><strong>Date:</strong> ${formatDateTime(combineDateTime(event.date, event.start))} - ${formatDateTime(combineDateTime(event.date, event.end))}</p>
-                            <p><strong>Location:</strong> ${event.location || "Location not specified"}</p>
-    
-                            <!-- Speaker list for event -->
-                            <div class="speakers" id="eventSpeakers-${event.eventid}"></div>
-                        </div>
-                    `;
-                    
-                    if (eventType === 'Current Event') {
-                        currentEventsContainer.appendChild(eventContainer);
-                    } else {
-                        upcomingEventsContainer.appendChild(eventContainer);
-                    }
-        
-                    // Show speakers for the event
-                    displaySpeakers(event.speakers, document.getElementById(`eventSpeakers-${event.eventid}`));
-                });
-        
-                // Clear loading message once data is fetched
-                loadingMessage.innerText = "";
-        
-                // Stop fetching if the total number of displayed events reaches 4
-                if (displayedEvents.length >= 3) {
-                    stopFetching = true;
-                }
-        
-            } catch (error) {
-                console.error("Error fetching event data:", error);
-                currentEventsContainer.innerHTML = "Error loading current events.";
-                document.querySelector('.upcoming-events').innerHTML = "Error loading upcoming events.";
-                loadingMessage.innerText = "Error fetching event data.";
-            }
+        // Modify the `getUpcomingEvent` function
+async function getUpcomingEvent() {
+    const url = "https://cors-anywhere.herokuapp.com/https://www.ehfg.org/programme.json?year=2024"; // Your local server's proxy URL
+    const loadingMessage = document.getElementById('loadingMessage');
+    const currentEventsContainer = document.getElementById('currentEventsContainer');
+    const upcomingEventsContainer = document.querySelector('.upcoming-events'); // Container for upcoming events
+
+    try {
+        // Show loading indicator
+        loadingMessage.innerText = "";
+
+        // Fetch the event data from the proxy server
+        const response = await fetch(url);
+
+        // Check if the response is OK
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
         }
+
+        // Parse the JSON response
+        const data = await response.json();
+
+        // Assuming the JSON structure has a list of events in an array
+        const events = data.events || data; // Adjust based on actual JSON structure
+
+        // Clear any previous events if it's the first time loading
+        if (!nextEventCheckTime) {
+            currentEventsContainer.innerHTML = '';
+            upcomingEventsContainer.innerHTML = '';
+        }
+
+        // Get the current date and time or the next event check time
+        const currentDate = nextEventCheckTime || new Date(); // Use nextEventCheckTime if set, otherwise use the current time
+
+        // Detect Current Events: Check if any event is happening now
+        const currentEvents = events.filter(event => {
+            const eventStartDate = combineDateTime(event.date, event.start);
+            const eventEndDate = combineDateTime(event.date, event.end);
+            return eventStartDate && eventEndDate && currentDate >= eventStartDate && currentDate <= eventEndDate;
+        });
+
+        // Detect Upcoming Events: Check for upcoming events
+        const upcomingEvents = events.filter(event => {
+            const eventStartDate = combineDateTime(event.date, event.start);
+            return eventStartDate > currentDate;
+        });
+
+        // Sort upcoming events by date and time
+        upcomingEvents.sort((a, b) => {
+            const aStartDate = combineDateTime(a.date, a.start);
+            const bStartDate = combineDateTime(b.date, b.start);
+            return aStartDate - bStartDate;
+        });
+
+        // Combine both current and upcoming events
+        const allEvents = [...currentEvents, ...upcomingEvents];
+
+        // Limit the total number of displayed events to 4
+        const displayedEvents = allEvents.slice(0, 3);
+
+        // Display current and upcoming events, up to 4 total
+        displayedEvents.forEach((event, index) => {
+            const eventContainer = document.createElement('div');
+            eventContainer.classList.add('event-container');
+            const eventType = index < currentEvents.length ? 'Current Event' : 'Upcoming Event'; // Determine if it's current or upcoming
+            eventContainer.innerHTML = `
+                <h2>${eventType}</h2>
+                <div class="event-details">
+                    <p><strong>Title:</strong> ${event.eventname || "Untitled Event"}</p>
+                    <p><strong>Date:</strong> ${formatDateTime(combineDateTime(event.date, event.start))} - ${formatDateTime(combineDateTime(event.date, event.end))}</p>
+                    <p><strong>Location:</strong> ${event.location || "Location not specified"}</p>
+
+                    <!-- Speaker list for event -->
+                    <div class="speakers" id="eventSpeakers-${event.eventid}"></div>
+                </div>
+            `;
+            
+            if (eventType === 'Current Event') {
+                currentEventsContainer.appendChild(eventContainer);
+            } else {
+                upcomingEventsContainer.appendChild(eventContainer);
+            }
+
+            // Show speakers for the event
+            displaySpeakers(event.speakers, document.getElementById(`eventSpeakers-${event.eventid}`));
+        });
+
+        // Clear loading message once data is fetched
+        loadingMessage.innerText = "";
+
+        // Stop fetching if the total number of displayed events reaches 4
+        if (displayedEvents.length >= 3) {
+            stopFetching = true;
+        }
+
+    } catch (error) {
+        console.error("Error fetching event data:", error);
+        currentEventsContainer.innerHTML = "Error loading current events.";
+        document.querySelector('.upcoming-events').innerHTML = "Error loading upcoming events.";
+        loadingMessage.innerText = "Error fetching event data.";
+    }
+}
+
         
         // Function to combine date and time into a Date object
         function combineDateTime(date, time) {
